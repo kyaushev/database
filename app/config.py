@@ -1,15 +1,17 @@
 from pydantic import BaseModel
 
+
 class LogConfig(BaseModel):
     """Logging configuration to be set for the server"""
 
-    LOGGER_NAME: str = "mycoolapp"
+    LOGGER_NAME: str = "database"
     LOG_FORMAT: str = "%(levelprefix)s | %(asctime)s | %(message)s"
     LOG_LEVEL: str = "DEBUG"
 
     # Logging config
     version: int = 1
     disable_existing_loggers: bool = False
+    propagate: bool = False
     formatters: dict = {
         "default": {
             "()": "uvicorn.logging.DefaultFormatter",

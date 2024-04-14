@@ -1,8 +1,16 @@
 import logging
+from enum import Enum
 
-from db.exeptions import RollbackException
+from app.db.exeptions import RollbackException
 
 logger = logging.getLogger(__name__)
+
+
+class TransactionType(str, Enum):
+    read_uncommitted = 'read_uncommitted'
+    read_committed = 'read_committed'
+    repeatable_read = 'repeatable_read'
+    serializable = 'serializable'
 
 
 class Transaction:

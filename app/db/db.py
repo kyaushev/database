@@ -2,23 +2,26 @@ import logging
 import pickle
 import threading
 import time
+from typing import Dict
 
-from db.collection import Collection
-from db.transaction import (ReadUncommittedTransaction,
-                            ReadCommittedTransaction,
-                            RepeatableReadTransaction,
-                            SerializableTransaction)
+from app.db.collection import Collection
+from app.db.transaction import (ReadUncommittedTransaction,
+                                ReadCommittedTransaction,
+                                RepeatableReadTransaction,
+                                SerializableTransaction, Transaction)
+from app.utils.meta_singleton import MetaSingleton
 
 logger = logging.getLogger(__name__)
 
 
-class Database:
+class Database(metaclass=MetaSingleton):
     FILENAME = 'data/db.pickle'
 
     def __init__(self):
-        self.collection = Collection()
+        self.collection: Collection = Collection()
         self.load_from_fs()
-        thread = threading.Thread(target=self.dump_daemon())
+        self.transactions: Dict[int, Transaction] = {}
+        thread = threading.Thread(target=self.dump_daemon, daemon=True)
         thread.start()
         logger.info(f'Database inited')
 
@@ -61,22 +64,37 @@ class Database:
     def dump_daemon(self):
         while True:
             time.sleep(1*60)
-            self.dump_to_fs()
+            # self.dump_to_fs()
+            break
 
     def load_from_fs(self):
         self.collection.records = Database.read()
 
     def begin_transaction(self):
-        return self.begin_read_uncommitted_transaction()
+        t: Transaction = self.begin_read_uncommitted_transaction()
+        self.transactions[t.id] = t
+        return t.id
 
     def begin_read_uncommitted_transaction(self):
-        return self.collection.begin(ReadUncommittedTransaction)
+        t: Transaction = self.collection.begin(ReadUncommittedTransaction)
+        self.transactions[t.id] = t
+        return t.id
 
     def begin_read_committed_transaction(self):
-        return self.collection.begin(ReadCommittedTransaction)
+        t: Transaction = self.collection.begin(ReadCommittedTransaction)
+        self.transactions[t.id] = t
+        return t.id
 
     def begin_repeatable_read_transaction(self):
-        return self.collection.begin(RepeatableReadTransaction)
+        t: Transaction = self.collection.begin(RepeatableReadTransaction)
+        self.transactions[t.id] = t
+        return t.id
 
     def begin_serializable_transaction(self):
-        return self.collection.begin(SerializableTransaction)
+        t: Transaction = self.collection.begin(SerializableTransaction)
+        self.transactions[t.id] = t
+        return t.id
+
+    def commit(self, transaction_id):
+        t: Transaction = self.transactions[transaction_id]
+        t.commit()
