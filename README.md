@@ -2,8 +2,6 @@
 
 Tested on Python 3.11
 
-TODO: Generate Docker image
-
 ### Create VirtualENV
 
 ~~~ bash
@@ -15,10 +13,14 @@ deactivate
 
 ### Develop
 ~~~ bash
-uvicorn app.main:app
+source venv/bin/activate
+uvicorn app.main:app --reload
+deactivate
 ~~~
 
 ### Run
 ~~~ bash
+source venv/bin/activate
 uvicorn app.main:app --host 127.0.0.1 --port 8000
+deactivate
 ~~~

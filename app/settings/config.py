@@ -10,7 +10,7 @@ class LogConfig(BaseModel):
 
     # Logging config
     version: int = 1
-    disable_existing_loggers: bool = False
+    disable_existing_loggers: bool = True
     propagate: bool = False
     formatters: dict = {
         "default": {

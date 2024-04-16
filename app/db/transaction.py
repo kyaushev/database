@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
 
+from app.db.collection import Collection
 from app.db.exeptions import RollbackException
 
 logger = logging.getLogger(__name__)
@@ -14,12 +15,12 @@ class TransactionType(str, Enum):
 
 
 class Transaction:
-    def __init__(self, collection, id):
+    def __init__(self, collection: Collection, t_id: int) -> None:
         self.collection = collection
-        self.id = id
+        self.id = t_id
         self.rollback_actions = []
 
-    def add_record(self, name, doc):
+    def add_record(self, name: str, doc: dict) -> None:
         record = {
             '_id': self.collection.identity(),
             'name': name,
@@ -30,9 +31,8 @@ class Transaction:
         self.rollback_actions.append(["delete", len(self.collection.records)])
         self.collection.records.append(record)
         logger.info(f'Record {record["_id"]} added by {self.id}')
-        return record['_id']
 
-    def delete_record(self, name):
+    def delete_record_name(self, name: str) -> None:
         for i, record in enumerate(self.collection.records):
             if self.is_visible(record) and record['name'] == name:
                 if self.is_locked(record):
@@ -44,12 +44,24 @@ class Transaction:
                     self.rollback_actions.append(["add", i])
                     logger.info(f'Record {record["_id"]} deleted by transaction: {self.id}.')
 
-    def update_record(self, name, doc):
+    def delete_record_id(self, _id: int) -> None:
+        for i, record in enumerate(self.collection.records):
+            if self.is_visible(record) and record['_id'] == _id:
+                if self.is_locked(record):
+                    warn = f'Failed to delete: record {record["_id"]} locked by another transaction.'
+                    logger.warning(warn)
+                    raise RollbackException(warn)
+                else:
+                    record['expired_id'] = self.id
+                    self.rollback_actions.append(["add", i])
+                    logger.info(f'Record {record["_id"]} deleted by transaction: {self.id}.')
+
+    def update_record(self, _id: int, name: str, doc: dict) -> None:
         logger.info(f'Update record {name}')
-        self.delete_record(name)
+        self.delete_record_id(_id)
         return self.add_record(name, doc)
 
-    def fetch_record(self, name):
+    def fetch_record(self, name: str) :
         for record in self.collection.records:
             if self.is_visible(record) and record['name'] is name:
                 return record
@@ -139,8 +151,8 @@ class RepeatableReadTransaction(ReadCommittedTransaction):
 
 
 class SerializableTransaction(RepeatableReadTransaction):
-    def __init__(self, collection, id):
-        Transaction.__init__(self, collection, id)
+    def __init__(self, collection, t_id):
+        Transaction.__init__(self, collection, t_id)
         self.existing_ids = self.collection.active_ids.copy()
 
     def is_visible(self, record):

@@ -1,16 +1,14 @@
-import logging
-from typing import Annotated
-
-from fastapi import FastAPI, Path
+from fastapi import FastAPI
 
 from app.db.db import Database
 from app.routers import api
 from logging.config import dictConfig
-from app.config import LogConfig
+import logging
+from app.settings.config import LogConfig
 
 dictConfig(LogConfig().dict())
+logger = logging.getLogger("database")
 
-logger = logging.getLogger(__name__)
 app = FastAPI(debug=True)
 app.include_router(api.router)
 
@@ -28,5 +26,4 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info('Shutting down')
-    db = Database()
-    db.dump_to_fs()
+    Database().dump_to_fs()
