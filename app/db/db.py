@@ -95,6 +95,12 @@ class Database(metaclass=MetaSingleton):
         self.transactions[t.id] = t
         return t.id
 
+    def send_oplog_entries(self, transaction_id):
+        transaction = self.transactions[transaction_id]
+        oplog_entries = transaction.oplog
+        
+
     def commit(self, transaction_id):
         t: Transaction = self.transactions[transaction_id]
+        self.send_oplog_entries(transaction_id)
         t.commit()

@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
 
+from app.db.db import Database
 from app.db.exeptions import RollbackException
 
 logger = logging.getLogger(__name__)
@@ -18,10 +19,14 @@ class Transaction:
         self.collection = collection
         self.id = id
         self.rollback_actions = []
+        self.oplog = []
 
-    def add_record(self, name, doc):
+    def append_to_oplog(self, operation):
+        self.oplog.append(operation)
+
+    def add_record(self, name, doc, id=None, created_id=None, expired_id=None):
         record = {
-            '_id': self.collection.identity(),
+            '_id': self.collection.identity() if not id else id,
             'name': name,
             'doc': doc,
             'created_id': self.id,
@@ -29,6 +34,7 @@ class Transaction:
         }
         self.rollback_actions.append(["delete", len(self.collection.records)])
         self.collection.records.append(record)
+        self.append_to_oplog({'action': 'insert', 'record': record})
         logger.info(f'Record {record["_id"]} added by {self.id}')
         return record['_id']
 
@@ -42,6 +48,7 @@ class Transaction:
                 else:
                     record['expired_id'] = self.id
                     self.rollback_actions.append(["add", i])
+                    self.append_to_oplog({'action': 'delete', 'record': record})
                     logger.info(f'Record {record["_id"]} deleted by transaction: {self.id}.')
 
     def update_record(self, name, doc):
