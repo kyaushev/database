@@ -10,6 +10,7 @@ from app.db.transaction import (ReadUncommittedTransaction,
                                 RepeatableReadTransaction,
                                 SerializableTransaction, Transaction)
 from app.utils.meta_singleton import MetaSingleton
+from app.cache.cache import ConfigCache
 
 logger = logging.getLogger(__name__)
 
@@ -98,9 +99,15 @@ class Database(metaclass=MetaSingleton):
     def send_oplog_entries(self, transaction_id):
         transaction = self.transactions[transaction_id]
         oplog_entries = transaction.oplog
-        
+        config = ConfigCache()
+        for replica in config.replicas:
+            response = requests.post(replica["url"] + f"/api/v1/db/replicate", json=oplog_entries)
 
-    def commit(self, transaction_id):
+            if response.status_code == 400:
+                raise HTTPException(status_code=400, detail=response.reason)
+
+    def commit(self, transaction_id, replicate=True):
         t: Transaction = self.transactions[transaction_id]
-        self.send_oplog_entries(transaction_id)
+        if replicate:
+            self.send_oplog_entries(transaction_id)
         t.commit()

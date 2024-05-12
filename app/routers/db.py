@@ -83,9 +83,8 @@ async def update(transaction_id: int, cmd: command.Delete) -> dict:
 
 
 @router.post("/replicate")
-async def begin() -> dict:
+async def begin(oplog: list[command.Oplog]) -> dict:
     try:
-        oplog = []
         db = Database()
         t_id = db.begin_transaction()
         transaction = db.transactions[t_id]
@@ -102,8 +101,7 @@ async def begin() -> dict:
                     )
                 case 'delete':
                     transaction.delete_record(record['name'])
-                case 'update':
-                    transaction.update_record("name", {})
+        db.commit(t_id, replicate=False)
     except Exception as e:
         # logger.
         raise HTTPException(status_code=400, detail=e)

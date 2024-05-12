@@ -31,3 +31,13 @@ class Update(BaseModel):
 class Delete(BaseModel):
     filter: Filter
 
+class Record(BaseModel):
+    _id: int
+    name: str
+    doc: Dict[str, Any]  # Словарь с произвольными ключами и значениями
+    created_id: int
+    expired_id: int
+
+class Oplog(BaseModel):
+    action: str
+    record: Record
