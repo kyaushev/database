@@ -20,7 +20,7 @@ router = APIRouter(
 async def begin(transaction_type: TransactionType) -> dict:
     try:
         t_id = Database().begin_transaction(transaction_type)
-        logger.info(f"/begin/{transaction_type}")
+        logger.info(f"/begin/{transaction_type}/{t_id}")
     except Exception as e:
         logger.critical(f'Begin error in transaction: {transaction_type}', exc_info=True)
         raise HTTPException(status_code=400, detail=e)
@@ -32,7 +32,7 @@ async def begin(transaction_type: TransactionType) -> dict:
 async def commit(transaction_id: Annotated[int, Path(title="Transaction ID to commit")]) -> dict:
     try:
         Database().commit(transaction_id)
-        logger.info(f"/commit/{transaction_id}")
+        logger.info(f"/commit/{transaction_id}/{transaction_id}")
     except Exception as e:
         logger.critical(f'Commit error in transaction: {transaction_id}', exc_info=True)
         raise HTTPException(status_code=400, detail=e)
@@ -44,7 +44,7 @@ async def commit(transaction_id: Annotated[int, Path(title="Transaction ID to co
 async def insert_one(transaction_id: int, cmd: command.Insert) -> dict:
     try:
         Database().insert(transaction_id=transaction_id, name=cmd.name, doc=cmd.doc)
-        logger.info(f"/insert_one/{transaction_id}")
+        logger.info(f"/insert_one/{transaction_id}\n{cmd}")
     except Exception as e:
         logger.critical(f'Insert error in transaction: {transaction_id}', exc_info=True)
         raise HTTPException(status_code=400, detail=e)
@@ -60,14 +60,18 @@ async def insert_many(transaction_id: int, cmds: list[command.Insert]) -> set[di
 @router.post("/find/{transaction_id}")
 async def find(transaction_id: int, cmd: command.Find) -> list[dict]:
     try:
-        values = Database().find(
-            transaction_id=transaction_id,
-            limit=cmd.filter.limit,
-            field=cmd.filter.field,
-            p=cmd.filter.predicate,
-            value=cmd.filter.value
-        )
-        logger.info(f"/find/{transaction_id}")
+        if transaction_id in Database().transactions:
+            values = Database().find(
+                transaction_id=transaction_id,
+                limit=cmd.filter.limit,
+                field=cmd.filter.cond.field,
+                p=cmd.filter.cond.predicate,
+                value=cmd.filter.cond.value
+            )
+            logger.info(f"/find/{transaction_id}\n{cmd}")
+        else:
+            logger.critical(f'Transaction: {transaction_id} not found', exc_info=True)
+            raise HTTPException(status_code=400, detail=f'Transaction: {transaction_id} not found')
     except Exception as e:
         logger.critical(f'Find error in transaction: {transaction_id}', exc_info=True)
         raise HTTPException(status_code=400, detail=e)
@@ -77,15 +81,19 @@ async def find(transaction_id: int, cmd: command.Find) -> list[dict]:
 @router.post("/update/{transaction_id}")
 async def update(transaction_id: int, cmd: command.Update) -> dict:
     try:
-        Database().update(
-            transaction_id=transaction_id,
-            limit=cmd.filter.limit,
-            field=cmd.filter.field,
-            p=cmd.filter.predicate,
-            value=cmd.filter.value,
-            new_doc=cmd.set
-        )
-        logger.info(f"/update/{transaction_id}")
+        if transaction_id in Database().transactions:
+            Database().update(
+                transaction_id=transaction_id,
+                limit=cmd.filter.limit,
+                field=cmd.filter.cond.field,
+                p=cmd.filter.cond.predicate,
+                value=cmd.filter.cond.value,
+                new_doc=cmd.set
+            )
+            logger.info(f"/update/{transaction_id}\n{cmd}")
+        else:
+            logger.critical(f'Transaction: {transaction_id} not found', exc_info=True)
+            raise HTTPException(status_code=400, detail=f'Transaction: {transaction_id} not found')
     except Exception as e:
         logger.critical(f'Update error in transaction: {transaction_id}', exc_info=True)
         raise HTTPException(status_code=400, detail=e)
@@ -95,14 +103,18 @@ async def update(transaction_id: int, cmd: command.Update) -> dict:
 @router.post("/delete/{transaction_id}")
 async def delete(transaction_id: int, cmd: command.Delete) -> dict:
     try:
-        Database().delete(
-            transaction_id=transaction_id,
-            limit=cmd.filter.limit,
-            field=cmd.filter.field,
-            p=cmd.filter.predicate,
-            value=cmd.filter.value
-        )
-        logger.info(f"/delete/{transaction_id}")
+        if transaction_id in Database().transactions:
+            Database().delete(
+                transaction_id=transaction_id,
+                limit=cmd.filter.limit,
+                field=cmd.filter.cond.field,
+                p=cmd.filter.cond.predicate,
+                value=cmd.filter.cond.value
+            )
+            logger.info(f"/delete/{transaction_id}\n{cmd}")
+        else:
+            logger.critical(f'Transaction: {transaction_id} not found', exc_info=True)
+            raise HTTPException(status_code=400, detail=f'Transaction: {transaction_id} not found')
     except Exception as e:
         logger.critical(f'Delete error in transaction: {transaction_id}', exc_info=True)
         raise HTTPException(status_code=400, detail=e)

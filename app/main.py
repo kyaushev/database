@@ -21,6 +21,7 @@ async def root():
 @app.on_event("startup")
 async def startup_event():
     logger.info('Starting up')
+    Database()
 
 
 @app.on_event("shutdown")

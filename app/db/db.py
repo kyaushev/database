@@ -29,7 +29,8 @@ def predicate(p: str):
         case "$gte":
             return lambda field, value: field >= value
         case _:
-            return lambda field, value: False
+            return None
+            # return lambda field, value: True
 
 
 class Database(metaclass=MetaSingleton):
@@ -81,12 +82,16 @@ class Database(metaclass=MetaSingleton):
 
     def dump_daemon(self):
         while True:
-            time.sleep(1*60)
+            time.sleep(1 * 60)
             self.dump_to_fs()
             break
 
     def load_from_fs(self):
         self.collection.records = Database.read()
+        max_i = max([record['_id'] for record in self.collection.records] + [0])
+        self.collection.next_doc = max_i + 1
+        print(self.collection.records)
+        logger.info(f'Read dump from filesystem')
 
     def begin_transaction(self, transaction_type: str) -> int:
         match transaction_type:
@@ -110,17 +115,21 @@ class Database(metaclass=MetaSingleton):
         t.commit()
 
     def insert(self, transaction_id: int, name: str, doc: dict) -> None:
-        transaction = self.transactions[transaction_id]
-        transaction.add_record(name=name, doc=doc)
+        try:
+            transaction = self.transactions[transaction_id]
+            transaction.add_record(name=name, doc=doc)
+        except KeyError:
+            logger.critical(f'Transaction: {transaction_id} not found', exc_info=True)
 
-    def find(self, transaction_id: int, limit: int, field: str, p: str, value: str) -> list[dict]:
+    def find(self, transaction_id: int, limit: int, field: str | None, p: str | None, value: str | None) -> list[dict]:
         f = predicate(p)
         t: Transaction = self.transactions[transaction_id]
-        target = [rec for rec in t.collection.records if f(str(rec.doc[field]), value)][limit]
-        limit = len(target) if limit < 0 else max(len(target), limit)
+        target = [rec for rec in t.collection.records if not field or f(str(rec.doc[field]), value)]
+        limit = len(target) if limit == -1 else max(len(target), limit)
         return target[:limit]
 
-    def update(self, transaction_id: int, limit: int, field: str, p: str, value: str, new_doc: dict) -> None:
+    def update(self, transaction_id: int, limit: int, field: str | None, p: str | None, value: str | None,
+               new_doc: dict) -> None:
         t: Transaction = self.transactions[transaction_id]
         target = self.find(
             transaction_id=transaction_id,
@@ -132,7 +141,7 @@ class Database(metaclass=MetaSingleton):
         for record in target:
             t.update_record(_id=record["_id"], name=record["name"], doc=new_doc)
 
-    def delete(self, transaction_id: int, limit: int, field: str, p: str, value: str):
+    def delete(self, transaction_id: int, limit: int, field: str | None, p: str | None, value: str | None):
         t: Transaction = self.transactions[transaction_id]
         target = self.find(
             transaction_id=transaction_id,
