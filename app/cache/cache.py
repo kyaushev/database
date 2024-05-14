@@ -8,3 +8,4 @@ class ConfigCache(metaclass=MetaSingleton):
         file = open("app\config\config_replicas.json")
         configurations = json.load(file)
         self.replicas = configurations["replicas"]
+        self.count = configurations["count"]

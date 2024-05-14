@@ -100,11 +100,12 @@ class Database(metaclass=MetaSingleton):
         transaction = self.transactions[transaction_id]
         oplog_entries = transaction.oplog
         config = ConfigCache()
-        for replica in config.replicas:
-            response = requests.post(replica["url"] + f"/api/v1/db/replicate", json=oplog_entries)
+        for index, replica in enumerate(random.shuffle(config.replicas)):
+            if index < config.count:
+                response = requests.post(replica["url"] + f"/api/v1/db/replicate", json=oplog_entries)
 
-            if response.status_code == 400:
-                raise HTTPException(status_code=400, detail=response.reason)
+                if response.status_code == 400:
+                    raise HTTPException(status_code=400, detail=response.reason)
 
     def commit(self, transaction_id, replicate=True):
         t: Transaction = self.transactions[transaction_id]
