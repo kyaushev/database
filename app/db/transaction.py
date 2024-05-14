@@ -29,8 +29,8 @@ class Transaction:
             '_id': self.collection.identity() if not id else id,
             'name': name,
             'doc': doc,
-            'created_id': self.id,
-            'expired_id': 0
+            'created_id': self.id if not created_id else created_id,
+            'expired_id': 0 if not expired_id else expired_id
         }
         self.rollback_actions.append(["delete", len(self.collection.records)])
         self.collection.records.append(record)

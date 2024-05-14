@@ -2,8 +2,11 @@ import logging
 import pickle
 import threading
 import time
+from random import shuffle
 from typing import Dict
 
+from fastapi import HTTPException
+import requests
 from app.db.collection import Collection
 from app.db.transaction import (ReadUncommittedTransaction,
                                 ReadCommittedTransaction,
@@ -100,7 +103,9 @@ class Database(metaclass=MetaSingleton):
         transaction = self.transactions[transaction_id]
         oplog_entries = transaction.oplog
         config = ConfigCache()
-        for index, replica in enumerate(random.shuffle(config.replicas)):
+        replicas = config.replicas
+        shuffle(replicas)
+        for index, replica in enumerate(replicas):
             if index < config.count:
                 response = requests.post(replica["url"] + f"/api/v1/db/replicate", json=oplog_entries)
 
