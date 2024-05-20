@@ -1,5 +1,5 @@
 {
     "shards": [
-        { "_id": 0, "url": "http://127.0.0.1:8000", "max_hashed_key": "f" }
+        { "_id": 0, "replicas": ["http://127.0.0.1:8000", "http://127.0.0.1:8001", "http://127.0.0.1:8002"], "max_hashed_key": "f" }
     ]
 }
