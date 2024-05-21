@@ -96,5 +96,5 @@ async def delete(transaction_id: int, cmd: command.Delete) -> dict:
     for shard in config.shards:
         replica_urls = shard["replicas"]
         for replica_url in replica_urls:
-            response = response | set(requests.post(replica_url + f"/update/{transaction_id}", json=cmd.__dict__))
+            response = response | set(requests.post(replica_url + f"/delete/{transaction_id}", json=cmd.__dict__))
     return response

@@ -1,14 +1,16 @@
 from typing import Literal
+
 from pydantic import BaseModel
 
+
 class Cond(BaseModel):
-    field: str
-    predicate: Literal["$eq", "$ne", "$lt", "$lte", "$gt", "$gte"]
-    value: str
+    field: str | None = None
+    predicate: Literal["$eq", "$ne", "$lt", "$lte", "$gt", "$gte"] | None = None
+    value: str | None = None
 
 
 class Filter(BaseModel):
-    cond: Cond
+    cond: Cond | None = Cond()
     limit: int | None = -1
 
 
@@ -18,13 +20,13 @@ class Insert(BaseModel):
 
 
 class Find(BaseModel):
-    filter: Filter
+    filter: Filter | None = Filter()
 
 
 class Update(BaseModel):
-    filter: Filter
+    filter: Filter | None = Filter()
     set: dict
 
 
 class Delete(BaseModel):
-    filter: Filter
+    filter: Filter | None = Filter()
